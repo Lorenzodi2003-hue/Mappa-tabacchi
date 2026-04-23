@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mappa Tabacchi</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; }
+        .popup-img { width: 100%; border-radius: 5px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // 1. Inizializza la mappa su un punto (es. Roma)
+        var map = L.map('map').setView([41.9028, 12.4964], 13);
+
+        // 2. Aggiungi lo sfondo della mappa (OpenStreetMap - Gratis)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // --- 3. I TUOI DATI (QUI AGGIUNGI I TABACCHINI) ---
+        var punti = [
+            {
+                nome: "Tabaccheria Rossi",
+                lat: 41.9028, 
+                lon: 12.4964,
+                desc: "Vende ricariche Terea e liquidi svapo.",
+                foto: "https://i.ibb.co/XYZ123/foto.jpg" // Link da ImgBB
+            },
+            {
+                nome: "Fumo & Co.",
+                lat: 41.9100, 
+                lon: 12.5000,
+                desc: "Distributore 24h con ampia scelta di trinciati.",
+                foto: "https://via.placeholder.com/150"
+            }
+        ];
+
+        // 4. Metti i puntini sulla mappa automaticamente
+        punti.forEach(function(punto) {
+            var contenuto = "<b>" + punto.nome + "</b><br>" + 
+                            punto.desc + "<br>" + 
+                            "<img src='" + punto.foto + "' class='popup-img'>";
+            
+            L.marker([punto.lat, punto.lon]).addTo(map)
+                .bindPopup(contenuto);
+        });
+    </script>
+</body>
+</html>
