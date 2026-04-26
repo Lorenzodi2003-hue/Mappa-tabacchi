@@ -1,54 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-    <title>Mappa Tabacchi</title>
+    <title>Mappa Tabacchi Intelligente</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
     <style>
-        body { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; font-family: sans-serif; }
         #map { height: 100vh; width: 100vw; }
-        .popup-img { width: 100%; border-radius: 5px; margin-top: 5px; }
+        .popup-img { width: 100%; border-radius: 8px; margin-top: 8px; max-height: 150px; object-fit: cover; }
+        .leaflet-popup-content { font-size: 14px; line-height: 1.4; }
     </style>
 </head>
 <body>
+
     <div id="map"></div>
 
-    <script>
-        // 1. Inizializza la mappa su un punto (es. Roma)
-        var map = L.map('map').setView([45.06092538174108, 7.644940080947354], 13);
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-        // 2. Aggiungi lo sfondo della mappa (OpenStreetMap - Gratis)
+    <script>
+        // --- CONFIGURAZIONE ---
+        // INCOLLA QUI IL TUO LINK CSV DA GOOGLE SHEETS
+        var public_spreadsheet_url = 'https://docs.google.com/spreadsheets/d/1-SD-vRclvEi7XdvsIdXKBMOgE-OdNZusd6voeINTlfA/edit?usp=drivesdk';
+
+        // 1. Inizializzazione Mappa
+        var map = L.map('map').setView([41.9028, 12.4964], 6); 
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // --- 3. I TUOI DATI (QUI AGGIUNGI I TABACCHINI) ---
-        var punti = [
-            {
-                nome: "Tabaccheria LexAne",
-                lat: 45.06457362512852,  
-                lon: 7.632232442048447,
-                desc: "Vende tabacco trinciato cartine corte filtri slim e ultra slim snack e bevande, pos e satispay"
-            },
-            {
-                nome: "Vinnolo Maurizio",
-                lat: 45.06516725768255, 
-                lon: 7.63642063282033,
-                desc: "vende tabacco trinciato cartine corte filtri e kit con catine corte e filtri ultraslim e accendino, pos"
-            }
-        ];
+        // 2. Aggiunta della Barra di Ricerca (Gratis)
+        L.Control.geocoder({
+            defaultMarkGeocode: false,
+            placeholder: "Cerca una città o via..."
+        })
+        .on('markgeocode', function(e) {
+            var bbox = e.geocode.bbox;
+            map.fitBounds(bbox);
+        })
+        .addTo(map);
 
-        // 4. Metti i puntini sulla mappa automaticamente
-        punti.forEach(function(punto) {
-            var contenuto = "<b>" + punto.nome + "</b><br>" + 
-                            punto.desc + "<br>" + 
-                            "<img src='" + punto.foto + "' class='popup-img'>";
+        // 3. Funzione per leggere i dati e metterli sulla mappa
+        function caricaDati() {
+            Papa.parse(public_spreadsheet_url, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    var punti = results.data;
+                    
+                    punti.forEach(function(punto) {
+                        var contenuto = "<b>" + (punto.nome || 'Tabaccheria') + "</b><br>" + 
+                                        (punto.desc || '') + "<br>";
+                        if(punto.foto) {
+                            contenuto += "<img src='" + punto.foto + "' class='popup-img'>";
+                        }
+
+                        // CASO A: Hai inserito le coordinate (più veloce)
+                        if (punto.lat && punto.lon) {
+                            aggiungiMarker(punto.lat, punto.lon, contenuto);
+                        } 
+                        // CASO B: Hai inserito solo l'indirizzo (Geocoding gratis)
+                        else if (punto.indirizzo) {
+                            cercaIndirizzo(punto.indirizzo, contenuto);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Funzione per mettere il puntino sulla mappa
+        function aggiungiMarker(lat, lon, contenuto) {
+            L.marker([lat, lon]).addTo(map).bindPopup(contenuto);
+        }
+
+        // Funzione che trasforma l'indirizzo in coordinate (Nominatim)
+        function cercaIndirizzo(indirizzo, contenuto) {
+            var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(indirizzo);
             
-            L.marker([punto.lat, punto.lon]).addTo(map)
-                .bindPopup(contenuto);
-        });
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        aggiungiMarker(data[0].lat, data[0].lon, contenuto);
+                    } else {
+                        console.log("Indirizzo non trovato: " + indirizzo);
+                    }
+                })
+                .catch(err => console.log(err));
+        }
+
+        window.addEventListener('DOMContentLoaded', caricaDati);
     </script>
 </body>
 </html>
+
